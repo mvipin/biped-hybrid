@@ -15,6 +15,19 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 #define RAD_TO_DEG(r) (((r)/M_PI)*180.0)
 
 #define LINKS_PER_KCHAIN 3
+#define NUM_DATA_POINTS 25
+
+#define TEST_LEFT_RIGHT() do { \
+    unit_test_1(-30, 30, -190, -190, 0, 0); \
+} while (0)
+
+#define TEST_UP_DOWN() do { \
+    unit_test_1(0, 0, -220, -120, 0, 0); \
+} while (0)
+
+#define TEST_FRONT_BACK() do { \
+    unit_test_1(0, 0, -190, -190, -50, 50); \
+} while (0)
 
 enum {
     LINK_POS_1 = 1,
@@ -39,7 +52,6 @@ enum {
     KCHAIN_NUM_MAX,
 };
 
-#define NUM_DATA_POINTS 25
 struct _trajectory {
     float t11;
     float t21;
@@ -59,7 +71,7 @@ const float l4 = 48.132; // mm
 const float l5 = 126.669; // mm
 const float l6 = 48.795; // mm
 
-unsigned long ts_in_ms;
+unsigned long init_ts;
 
 // Link stores the D-H parameters for one link in the chain. It's an abstract base class so to use it you have to subclass it and define the Move function, more on that later though
 class Link {
@@ -345,187 +357,68 @@ class ParallelChain {
 // Kinematic chains for upper and end leg
 ParallelChain active;
 
-void testFrontBack(void) {
-    Point PE;
-    PE.X() = 0.0;
-    PE.Y() = -190.0;
-    PE.Z() = 0.0;
-
-    int min = -50;
-    int max = 50;
-    int delayms = 5;
-
-    // Movement in Z direction
-    for (int i=0; i<=max; i+=1) {
-        PE.Z() = i;
-        active.InverseKinematics(PE);
-        s11.Move(RAD_TO_DEG(L1_0.theta));
-        s21.Move(RAD_TO_DEG(L2.theta));
-        s41.Move(RAD_TO_DEG(L4.theta));
-        s22.Move(RAD_TO_DEG(L2.theta));
-        s42.Move(RAD_TO_DEG(L4.theta));
-        delay(delayms);
-    }
-
-    for (int i=max; i>=min; i-=1) {
-        PE.Z() = i;
-        active.InverseKinematics(PE);
-        s11.Move(RAD_TO_DEG(L1_0.theta));
-        s21.Move(RAD_TO_DEG(L2.theta));
-        s41.Move(RAD_TO_DEG(L4.theta));
-        s22.Move(RAD_TO_DEG(L2.theta));
-        s42.Move(RAD_TO_DEG(L4.theta));
-        delay(delayms);
-#if 0
-        Serial.print("Servo T11 = ");
-        Serial.println(RAD_TO_DEG(L1_0.theta));
-        Serial.print("Servo T21 = ");
-        Serial.println(RAD_TO_DEG(L2.theta));
-        Serial.print("Servo T41 = ");
-        Serial.println(RAD_TO_DEG(L4.theta));
-#endif
-    }
-
-    for (int i=min; i<=0; i+=1) {
-        PE.Z() = i;
-        active.InverseKinematics(PE);
-        s11.Move(RAD_TO_DEG(L1_0.theta));
-        s21.Move(RAD_TO_DEG(L2.theta));
-        s41.Move(RAD_TO_DEG(L4.theta));
-        s22.Move(RAD_TO_DEG(L2.theta));
-        s42.Move(RAD_TO_DEG(L4.theta));
-        delay(delayms);
-    }
-}
-
-void testLeftRight(void) {
-    Point PE;
-    PE.X() = 0.0;
-    PE.Y() = -190.0;
-    PE.Z() = 0.0;
-
-    int min = -30;
-    int max = 30;
-    int delayms = 5;
-    
-    // Movement in X direction
-    for (int i=0; i<=max; i+=1) {
-        PE.X() = i;
-        active.InverseKinematics(PE);
-        s11.Move(RAD_TO_DEG(L1_0.theta));
-        s21.Move(RAD_TO_DEG(L2.theta));
-        s41.Move(RAD_TO_DEG(L4.theta));
-        s22.Move(RAD_TO_DEG(L2.theta));
-        s42.Move(RAD_TO_DEG(L4.theta));
-        delay(delayms);
-    }
-
-    for (int i=max; i>=min; i-=1) {
-        PE.X() = i;
-        active.InverseKinematics(PE);
-        s11.Move(RAD_TO_DEG(L1_0.theta));
-        s21.Move(RAD_TO_DEG(L2.theta));
-        s41.Move(RAD_TO_DEG(L4.theta));
-        s22.Move(RAD_TO_DEG(L2.theta));
-        s42.Move(RAD_TO_DEG(L4.theta));
-        delay(delayms);
-#if 0
-        Serial.print("Servo T11 = ");
-        Serial.println(RAD_TO_DEG(L1_0.theta));
-        Serial.print("Servo T21 = ");
-        Serial.println(RAD_TO_DEG(L2.theta));
-        Serial.print("Servo T41 = ");
-        Serial.println(RAD_TO_DEG(L4.theta));
-#endif
-    }
-
-    for (int i=min; i<=0; i+=1) {
-        PE.X() = i;
-        active.InverseKinematics(PE);
-        s11.Move(RAD_TO_DEG(L1_0.theta));
-        s21.Move(RAD_TO_DEG(L2.theta));
-        s41.Move(RAD_TO_DEG(L4.theta));
-        s22.Move(RAD_TO_DEG(L2.theta));
-        s42.Move(RAD_TO_DEG(L4.theta));
-        delay(delayms);
-    }
-}
-
-void testUpDown(void) {
-    Point PE;
-    PE.X() = 0.0;
-    PE.Y() = -220.0;
-    PE.Z() = 0.0;
-
-    int min = -220;
-    int max = -120;
-    int delayms = 5;
-
-    // Movement in Y direction
-    for (int i=min; i<=max; i+=1) {
-        PE.Y() = i;
-        active.InverseKinematics(PE);
-        //Serial << "L1_0 = " << L1_0.theta << " L2 = " << L2.theta << " L3 = " << L3.theta << " L4 = " << L4.theta << " L6 = " << L6.theta << "\n";
-        s11.Move(RAD_TO_DEG(L1_0.theta));
-        s21.Move(RAD_TO_DEG(L2.theta));
-        s41.Move(RAD_TO_DEG(L4.theta));
-        s22.Move(RAD_TO_DEG(L2.theta));
-        s42.Move(RAD_TO_DEG(L4.theta));
-        delay(delayms);
-#if 0
-        Serial.print("Servo T11 = ");
-        Serial.println(RAD_TO_DEG(L1_0.theta));
-        Serial.print("Servo T21 = ");
-        Serial.println(RAD_TO_DEG(L2.theta));
-        Serial.print("Servo T41 = ");
-        Serial.println(RAD_TO_DEG(L4.theta));
-#endif
-    }
-    
-    for (int i=max; i>=min; i-=1) {
-        PE.Y() = i;
-        active.InverseKinematics(PE);
-        //Serial << "L1_0 = " << L1_0.theta << " L2 = " << L2.theta << " L3 = " << L3.theta << " L4 = " << L4.theta << " L6 = " << L6.theta << "\n";
-        s11.Move(RAD_TO_DEG(L1_0.theta));
-        s21.Move(RAD_TO_DEG(L2.theta));
-        s41.Move(RAD_TO_DEG(L4.theta));
-        s22.Move(RAD_TO_DEG(L2.theta));
-        s42.Move(RAD_TO_DEG(L4.theta));
-        delay(delayms);
-#if 0
-        Serial.print("Servo T11 = ");
-        Serial.println(RAD_TO_DEG(L1_0.theta));
-        Serial.print("Servo T21 = ");
-        Serial.println(RAD_TO_DEG(L2.theta));
-        Serial.print("Servo T41 = ");
-        Serial.println(RAD_TO_DEG(L4.theta));
-#endif
-    }
-}
-
-void sinusoid_xy(int xmin, int xmax, int ymin, int ymax) {
+void unit_test_1(int xmin, int xmax, int ymin, int ymax, int zmin, int zmax) {
     Point PE;
     int index;
     int xmid = (xmin + xmax) >> 1;
     int xamp = (xmax - xmin) >> 1;
     int ymid = (ymin + ymax) >> 1;
     int yamp = (ymax - ymin) >> 1;
+    int zmid = (zmin + zmax) >> 1;
+    int zamp = (zmax - zmin) >> 1;
+    
+    // Generate the trajectory
+    int t = (millis() - init_ts) % T;
+    float tmp = sin(2*M_PI*t/T);
+    PE.X() = xmid + xamp * tmp;
+    PE.Y() = ymid + yamp * tmp;
+    PE.Z() = zmid + zamp * tmp;
+
+    // Compute the joint variables
+    active.InverseKinematics(PE);
+    s11.Move(RAD_TO_DEG(L1_0.theta));
+    s21.Move(RAD_TO_DEG(L2.theta));
+    s41.Move(RAD_TO_DEG(L4.theta));
+    s22.Move(RAD_TO_DEG(L2.theta));
+    s42.Move(RAD_TO_DEG(L4.theta));
+}
+
+void unit_test_2(int xmin, int xmax, int ymin, int ymax, int zmin, int zmax, bool compute) {
+    Point PE;
+    int index;
+    int xmid = (xmin + xmax) >> 1;
+    int xamp = (xmax - xmin) >> 1;
+    int ymid = (ymin + ymax) >> 1;
+    int yamp = (ymax - ymin) >> 1;
+    int zmid = (zmin + zmax) >> 1;
+    int zamp = (zmax - zmin) >> 1;
     int interval = T/NUM_DATA_POINTS;
 
-    PE.Z() = 0.0;
-    for (int t=0; t<T; t+=interval) {
-        // Generate the trajectory
-        PE.X() = xmid + xamp * sin(2*M_PI*t/T);
-        PE.Y() = ymid + yamp * sin(2*M_PI*t/T);
-
-        // Precompute the joint variables
-        index = t/interval;
-        active.InverseKinematics(PE);
-        trajectory[index].t11 = RAD_TO_DEG(L1_0.theta);
-        trajectory[index].t21 = RAD_TO_DEG(L2.theta);
-        trajectory[index].t41 = RAD_TO_DEG(L4.theta);
-        trajectory[index].t22 = RAD_TO_DEG(L2.theta);
-        trajectory[index].t42 = RAD_TO_DEG(L4.theta);
+    // Precompute or execute
+    if (compute) {
+        for (int t=0; t<T; t+=interval) {
+            // Generate the trajectory
+            float tmp = sin(2*M_PI*t/T);
+            PE.X() = xmid + xamp * tmp;
+            PE.Y() = ymid + yamp * tmp;
+            PE.Z() = zmid + zamp * tmp;
+    
+            // Precompute the joint variables
+            index = t/interval;
+            active.InverseKinematics(PE);
+            trajectory[index].t11 = RAD_TO_DEG(L1_0.theta);
+            trajectory[index].t21 = RAD_TO_DEG(L2.theta);
+            trajectory[index].t41 = RAD_TO_DEG(L4.theta);
+            trajectory[index].t22 = RAD_TO_DEG(L2.theta);
+            trajectory[index].t42 = RAD_TO_DEG(L4.theta);
+        }
+    } else {
+        index = ((millis() - init_ts) % T)/interval;
+        s11.Move(trajectory[index].t11);
+        s21.Move(trajectory[index].t21);
+        s41.Move(trajectory[index].t41);
+        s22.Move(trajectory[index].t22);
+        s42.Move(trajectory[index].t42);      
     }
 }
 
@@ -569,15 +462,11 @@ void setup() {
     s42.SetOffset(RAD_TO_DEG(L4.theta));
     
     //Serial << "L1_0 = " << L1_0.theta << " L2 = " << L2.theta << " L3 = " << L3.theta << " L4 = " << L4.theta << " L6 = " << L6.theta << "\n";
-    sinusoid_xy(-30, 30, -190, -120);
-    ts_in_ms = millis();
+    unit_test_2(-30, 30, -190, -120, -10, 10, true);
+    init_ts = millis();
 }
 
 void loop() {
-    int index = ((millis() - ts_in_ms) % T)/(T/NUM_DATA_POINTS);
-    s11.Move(trajectory[index].t11);
-    s21.Move(trajectory[index].t21);
-    s41.Move(trajectory[index].t41);
-    s22.Move(trajectory[index].t22);
-    s42.Move(trajectory[index].t42);
+    //TEST_UP_DOWN();
+    unit_test_2(-30, 30, -190, -120, -10, 10, false);
 }
