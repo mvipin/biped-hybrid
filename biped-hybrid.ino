@@ -39,6 +39,16 @@ enum {
     KCHAIN_NUM_MAX,
 };
 
+#define NUM_DATA_POINTS 25
+struct _trajectory {
+    float t11;
+    float t21;
+    float t41;
+    float t22;
+    float t42;
+} trajectory[NUM_DATA_POINTS];
+
+const int T = 2500; // in ms
 const float phi = DEG_TO_RAD(34.55);
 const float gamma = DEG_TO_RAD(135.8);
 const float a = 0; //overlapping joint in mm
@@ -48,6 +58,8 @@ const float l3 = 110.0; // mm
 const float l4 = 48.132; // mm
 const float l5 = 126.669; // mm
 const float l6 = 48.795; // mm
+
+unsigned long ts_in_ms;
 
 // Link stores the D-H parameters for one link in the chain. It's an abstract base class so to use it you have to subclass it and define the Move function, more on that later though
 class Link {
@@ -446,7 +458,7 @@ void testUpDown(void) {
     PE.Z() = 0.0;
 
     int min = -220;
-    int max = -120; // -120.0
+    int max = -120;
     int delayms = 5;
 
     // Movement in Y direction
@@ -491,6 +503,32 @@ void testUpDown(void) {
     }
 }
 
+void sinusoid_xy(int xmin, int xmax, int ymin, int ymax) {
+    Point PE;
+    int index;
+    int xmid = (xmin + xmax) >> 1;
+    int xamp = (xmax - xmin) >> 1;
+    int ymid = (ymin + ymax) >> 1;
+    int yamp = (ymax - ymin) >> 1;
+    int interval = T/NUM_DATA_POINTS;
+
+    PE.Z() = 0.0;
+    for (int t=0; t<T; t+=interval) {
+        // Generate the trajectory
+        PE.X() = xmid + xamp * sin(2*M_PI*t/T);
+        PE.Y() = ymid + yamp * sin(2*M_PI*t/T);
+
+        // Precompute the joint variables
+        index = t/interval;
+        active.InverseKinematics(PE);
+        trajectory[index].t11 = RAD_TO_DEG(L1_0.theta);
+        trajectory[index].t21 = RAD_TO_DEG(L2.theta);
+        trajectory[index].t41 = RAD_TO_DEG(L4.theta);
+        trajectory[index].t22 = RAD_TO_DEG(L2.theta);
+        trajectory[index].t42 = RAD_TO_DEG(L4.theta);
+    }
+}
+
 void setup() {
     Serial.begin(115200);
 
@@ -531,8 +569,15 @@ void setup() {
     s42.SetOffset(RAD_TO_DEG(L4.theta));
     
     //Serial << "L1_0 = " << L1_0.theta << " L2 = " << L2.theta << " L3 = " << L3.theta << " L4 = " << L4.theta << " L6 = " << L6.theta << "\n";
+    sinusoid_xy(-30, 30, -190, -120);
+    ts_in_ms = millis();
 }
 
 void loop() {
-    testUpDown();
+    int index = ((millis() - ts_in_ms) % T)/(T/NUM_DATA_POINTS);
+    s11.Move(trajectory[index].t11);
+    s21.Move(trajectory[index].t21);
+    s41.Move(trajectory[index].t41);
+    s22.Move(trajectory[index].t22);
+    s42.Move(trajectory[index].t42);
 }
