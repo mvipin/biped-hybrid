@@ -2,6 +2,9 @@
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 
+// Change it to #define for enabling unit test support
+#undef UNIT_TEST_SUPPORT
+
 // called this way, it uses the default address 0x40
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
@@ -15,7 +18,7 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 #define RAD_TO_DEG(r) (((r)/M_PI)*180.0)
 
 #define LINKS_PER_KCHAIN 3
-#define NUM_DATA_POINTS 25
+#define NUM_DATA_POINTS 10
 
 #define TEST_LEFT_RIGHT() do { \
     unit_test_1(-30, 30, -190, -190, 0, 0); \
@@ -52,6 +55,7 @@ enum {
     KCHAIN_NUM_MAX,
 };
 
+#ifdef UNIT_TEST_SUPPORT
 struct _trajectory {
     float t11;
     float t21;
@@ -59,6 +63,7 @@ struct _trajectory {
     float t22;
     float t42;
 } trajectory[NUM_DATA_POINTS];
+#endif // UNIT_TEST_SUPPORT
 
 const int T = 2500; // in ms
 const float phi = DEG_TO_RAD(34.55);
@@ -357,6 +362,7 @@ class ParallelChain {
 // Kinematic chains for upper and end leg
 ParallelChain active;
 
+#ifdef UNIT_TEST_SUPPORT
 void unit_test_1(int xmin, int xmax, int ymin, int ymax, int zmin, int zmax) {
     Point PE;
     int index;
@@ -421,6 +427,101 @@ void unit_test_2(int xmin, int xmax, int ymin, int ymax, int zmin, int zmax, boo
         s42.Move(trajectory[index].t42);      
     }
 }
+#endif // UNIT_TEST_SUPPORT
+
+enum {
+    LEFT_LEG,
+    RIGHT_LEG,
+    LEG_NUM_MAX,
+};
+
+class Gait {
+    int time_period;
+    float x_swing_rest;
+    float x_swing_amp;
+    float y_mean_left;
+    float y_sigma;
+    float y_mean_right;
+    float y_amp;
+    float y_offset;
+    float z_amp1;
+    float z_amp2;
+    float z_phase_offset;
+    struct {
+        float t11;
+        float t21;
+        float t41;
+        float t22;
+        float t42;
+    } trajectory[LEG_NUM_MAX][NUM_DATA_POINTS];
+
+    public:
+    Gait(int _time_period, float _z_phase_offset,
+          float _x_swing_rest, float _x_swing_amp, 
+          float _y_mean_left, float _y_sigma, float _y_mean_right, float _y_amp, float _y_offset,
+          float _z_amp1, float _z_amp2) {
+        time_period = _time_period;
+        z_phase_offset = _z_phase_offset;
+        x_swing_rest = _x_swing_rest;
+        x_swing_amp = _x_swing_amp;
+        y_mean_left = _y_mean_left;
+        y_sigma = _y_sigma;
+        y_mean_right = _y_mean_right;
+        y_amp = _y_amp;
+        y_offset = _y_offset;
+        z_amp1 = _z_amp1;
+        z_amp2 = _z_amp2;
+    }
+
+    Compute(void) {
+        Point PE;
+        int interval = T/NUM_DATA_POINTS;
+
+        for (int leg=LEFT_LEG; leg<=RIGHT_LEG; leg++) {
+            float x_rest = x_swing_rest;
+            float y_mean = y_mean_left;
+            if (leg == RIGHT_LEG) {
+                z_phase_offset += M_PI;
+                x_rest *= -1;
+                y_mean = y_mean_right;
+            }
+    
+            for (int t=0; t<T; t+=interval) {
+                // Generate the trajectory
+                float tmp = 2*M_PI*t/T;
+                PE.X() = (x_swing_amp/2)*sin(tmp) + x_rest;
+                PE.Y() = (y_amp/(y_sigma*sqrt(2*M_PI))) * exp(-0.5 * (((t%T)-y_mean)/y_sigma) * (((t%T)-y_mean)/y_sigma)) - y_offset;
+                PE.Z() = z_amp1*sin(tmp+z_phase_offset) + z_amp2*sin(2*(tmp+z_phase_offset));
+        
+                // Precompute the joint variables
+                int index = t/interval;
+                active.InverseKinematics(PE);
+                trajectory[leg][index].t11 = RAD_TO_DEG(L1_0.theta);
+                trajectory[leg][index].t21 = RAD_TO_DEG(L2.theta);
+                trajectory[leg][index].t41 = RAD_TO_DEG(L4.theta);
+                trajectory[leg][index].t22 = RAD_TO_DEG(L2.theta);
+                trajectory[leg][index].t42 = RAD_TO_DEG(L4.theta);
+            }
+        }
+    }
+
+    Execute(void) {        
+        int interval = T/NUM_DATA_POINTS;
+        int index = ((millis() - init_ts) % T)/interval;
+        s11.Move(trajectory[LEFT_LEG][index].t11);
+        s21.Move(trajectory[LEFT_LEG][index].t21);
+        s41.Move(trajectory[LEFT_LEG][index].t41);
+        s22.Move(trajectory[LEFT_LEG][index].t22);
+        s42.Move(trajectory[LEFT_LEG][index].t42);      
+        s11.Move(trajectory[RIGHT_LEG][index].t11);
+        s21.Move(trajectory[RIGHT_LEG][index].t21);
+        s41.Move(trajectory[RIGHT_LEG][index].t41);
+        s22.Move(trajectory[RIGHT_LEG][index].t22);
+        s42.Move(trajectory[RIGHT_LEG][index].t42);
+    }
+};
+
+Gait gait(T, 4.7, 13.42, 96.28, 0.5, 0.14, 1.5, 18, 230, 70, 35);
 
 void setup() {
     Serial.begin(115200);
@@ -460,13 +561,19 @@ void setup() {
     s41.SetOffset(RAD_TO_DEG(L4.theta));
     s22.SetOffset(RAD_TO_DEG(L2.theta));
     s42.SetOffset(RAD_TO_DEG(L4.theta));
-    
-    //Serial << "L1_0 = " << L1_0.theta << " L2 = " << L2.theta << " L3 = " << L3.theta << " L4 = " << L4.theta << " L6 = " << L6.theta << "\n";
+
+#ifdef UNIT_TEST_SUPPORT
     unit_test_2(-30, 30, -190, -120, -10, 10, true);
+#endif // UNIT_TEST_SUPPORT
+
+    gait.Compute();
     init_ts = millis();
 }
 
 void loop() {
+#ifdef UNIT_TEST_SUPPORT
     //TEST_UP_DOWN();
     unit_test_2(-30, 30, -190, -120, -10, 10, false);
+#endif // UNIT_TEST_SUPPORT
+    gait.Execute();
 }
