@@ -4,6 +4,7 @@
 
 // Change it to #define for enabling unit test support
 #undef UNIT_TEST_SUPPORT
+#undef OFFLINE_TRAJECTORY_SUPPORT
 
 // called this way, it uses the default address 0x40
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
@@ -18,7 +19,7 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 #define RAD_TO_DEG(r) (((r)/M_PI)*180.0)
 
 #define LINKS_PER_KCHAIN 3
-#define NUM_DATA_POINTS 10
+#define NUM_DATA_POINTS 50
 
 #define TEST_LEFT_RIGHT() do { \
     unit_test_1(-30, 30, -190, -190, 0, 0); \
@@ -65,7 +66,7 @@ struct _trajectory {
 } trajectory[NUM_DATA_POINTS];
 #endif // UNIT_TEST_SUPPORT
 
-const int T = 2500; // in ms
+const int T = 2000; // in ms
 const float phi = DEG_TO_RAD(34.55);
 const float gamma = DEG_TO_RAD(135.8);
 const float a = 0; //overlapping joint in mm
@@ -447,6 +448,7 @@ class Gait {
     float z_amp1;
     float z_amp2;
     float z_phase_offset;
+#ifdef OFFLINE_TRAJECTORY_SUPPORT
     struct {
         float t11;
         float t21;
@@ -454,6 +456,7 @@ class Gait {
         float t22;
         float t42;
     } trajectory[LEG_NUM_MAX][NUM_DATA_POINTS];
+#endif // OFFLINE_TRAJECTORY_SUPPORT
 
     public:
     Gait(int _time_period, float _z_phase_offset,
@@ -473,6 +476,7 @@ class Gait {
         z_amp2 = _z_amp2;
     }
 
+#ifdef OFFLINE_TRAJECTORY_SUPPORT
     Compute(void) {
         Point PE;
         int interval = T/NUM_DATA_POINTS;
@@ -480,17 +484,19 @@ class Gait {
         for (int leg=LEFT_LEG; leg<=RIGHT_LEG; leg++) {
             float x_rest = x_swing_rest;
             float y_mean = y_mean_left;
+            float phase_offset = 0;
+
             if (leg == RIGHT_LEG) {
-                z_phase_offset += M_PI;
+                phase_offset = M_PI;
                 x_rest *= -1;
                 y_mean = y_mean_right;
             }
-    
+
             for (int t=0; t<T; t+=interval) {
                 // Generate the trajectory
                 float tmp = 2*M_PI*t/T;
                 PE.X() = (x_swing_amp/2)*sin(tmp) + x_rest;
-                PE.Y() = (y_amp/(y_sigma*sqrt(2*M_PI))) * exp(-0.5 * (((t%T)-y_mean)/y_sigma) * (((t%T)-y_mean)/y_sigma)) - y_offset;
+                PE.Y() = (y_amp/(y_sigma*sqrt(2*M_PI))) * exp(-0.5 * (((t/1000)-y_mean)/y_sigma) * (((t/1000)-y_mean)/y_sigma)) - y_offset;
                 PE.Z() = z_amp1*sin(tmp+z_phase_offset) + z_amp2*sin(2*(tmp+z_phase_offset));
         
                 // Precompute the joint variables
@@ -518,6 +524,41 @@ class Gait {
         s41.Move(trajectory[RIGHT_LEG][index].t41);
         s22.Move(trajectory[RIGHT_LEG][index].t22);
         s42.Move(trajectory[RIGHT_LEG][index].t42);
+    }
+#endif // OFFLINE_TRAJECTORY_SUPPORT
+
+    int oversample = 0;
+    void ComputeExecute(void) {
+        Point PE;
+        float x_rest = x_swing_rest;
+        float y_mean = y_mean_left;
+        float phase_offset = 0.0;
+
+        // Generate the trajectory for Left Leg
+        int t = (millis() - init_ts) % T;
+        float tmp1 = 2*M_PI*t/T;
+        PE.X() = (x_swing_amp/2)*sin(tmp1) + x_rest;
+        float tmp2 = ((t/1000.0)-y_mean)/y_sigma;
+        PE.Y() = (y_amp/(y_sigma*sqrt(2*M_PI))) * exp(-0.5*tmp2*tmp2) - y_offset;
+        PE.Z() = z_amp1*sin(tmp1+z_phase_offset+phase_offset) + z_amp2*sin(2*(tmp1+z_phase_offset+phase_offset));
+
+        // Precompute the joint variables
+        s11.Move(RAD_TO_DEG(L1_0.theta));
+        s21.Move(RAD_TO_DEG(L2.theta));
+        s41.Move(RAD_TO_DEG(L4.theta));
+        s22.Move(RAD_TO_DEG(L2.theta));
+        s42.Move(RAD_TO_DEG(L4.theta));
+
+        // Generate the trajectory for Right Leg
+        phase_offset = M_PI;
+        x_rest *= -1;
+        y_mean = y_mean_right;
+        PE.X() = (x_swing_amp/2)*sin(tmp1) + x_rest;
+        tmp2 = ((t/1000.0)-y_mean)/y_sigma;
+        PE.Y() = (y_amp/(y_sigma*sqrt(2*M_PI))) * exp(-0.5*tmp2*tmp2) - y_offset;
+        PE.Z() = z_amp1*sin(tmp1+z_phase_offset+phase_offset) + z_amp2*sin(2*(tmp1+z_phase_offset+phase_offset));
+
+        // Precompute the joint variables        
     }
 };
 
@@ -566,7 +607,9 @@ void setup() {
     unit_test_2(-30, 30, -190, -120, -10, 10, true);
 #endif // UNIT_TEST_SUPPORT
 
+#ifdef OFFLINE_TRAJECTORY_SUPPORT
     gait.Compute();
+#endif // OFFLINE_TRAJECTORY_SUPPORT
     init_ts = millis();
 }
 
@@ -575,5 +618,8 @@ void loop() {
     //TEST_UP_DOWN();
     unit_test_2(-30, 30, -190, -120, -10, 10, false);
 #endif // UNIT_TEST_SUPPORT
+#ifdef OFFLINE_TRAJECTORY_SUPPORT
     gait.Execute();
+#endif // OFFLINE_TRAJECTORY_SUPPORT
+    gait.ComputeExecute();
 }
