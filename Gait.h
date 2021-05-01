@@ -6,8 +6,6 @@
 #include "Link.h"
 #include "ParallelChain.h"
 
-#define NUM_DATA_POINTS 10
-
 enum {
     LEFT_LEG,
     RIGHT_LEG,
