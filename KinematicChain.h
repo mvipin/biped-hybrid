@@ -1,9 +1,6 @@
 #ifndef KINEMATIC_CHAIN_H
 #define KINEMATIC_CHAIN_H
 
-#include <Geometry.h>
-#include "Link.h"
-
 // KinematicChain manages the links and implements the forward and inverse kinematics
 template<int maxLinks> class KinematicChain {
     // A few variables used in the inverse kinematics defined here to save re-allocating them every time inverse kinematics is called

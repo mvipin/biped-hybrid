@@ -1,12 +1,6 @@
 #ifndef LINK_H
 #define LINK_H
 
-enum {
-    LINK_POS_1 = 1,
-    LINK_POS_2,
-    LINK_POS_3,
-};
-
 // Link stores the D-H parameters for one link in the chain. It's an abstract base class so to use it you have to subclass it and define the Move function, more on that later though
 class Link {
     public:

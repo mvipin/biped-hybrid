@@ -1,11 +1,25 @@
 #ifndef PARALLEL_CHAIN_H
 #define PARALLEL_CHAIN_H
 
-#include "Link.h"
-#include "KinematicChain.h"
-#include "JointServo.h"
-#include "Utils.h"
+// Position of a link within a kinematic chain
+enum {
+    LINK_POS_1 = 1,
+    LINK_POS_2,
+    LINK_POS_3,
+    LINKS_PER_KCHAIN = LINK_POS_3,
+};
 
+// Joints with servos in a prallel chain
+enum {
+    ACTIVE_JOINT_11,
+    ACTIVE_JOINT_21,
+    ACTIVE_JOINT_41,
+    ACTIVE_JOINT_22,
+    ACTIVE_JOINT_42,
+    ACTIVE_JOINTS_PER_PCHAIN,
+};
+
+// Kinematic chains in a parallel chain
 enum {
     KCHAIN_UPPER,
     KCHAIN_MIDDLE,
@@ -13,19 +27,18 @@ enum {
     KCHAIN_NUM_MAX,
 };
 
-#define LINKS_PER_KCHAIN 3
-#define phi DEG_TO_RAD(34.55)
-#define gamma DEG_TO_RAD(135.8)
-#define a 0 //overlapping joint in mm
-#define l1 35.087 // mm
-#define l2 110.0 // mm
-#define l3 110.0 // mm
-#define l4 48.132 // mm
-#define l5 126.669 // mm
-#define l6 48.795 // mm
-
 class ParallelChain {
     private:
+    const float phi = LINK_PHI;
+    const float gamma = LINK_GAMMA;
+    const float a = LINK_A_SIZE; //overlapping joint in mm
+    const float l1 = LINK_L1_SIZE; // mm
+    const float l2 = LINK_L2_SIZE; // mm
+    const float l3 = LINK_L3_SIZE; // mm
+    const float l4 = LINK_L4_SIZE; // mm
+    const float l5 = LINK_L5_SIZE; // mm
+    const float l6 = LINK_L6_SIZE; // mm
+
     // Define the joints
     RevoluteJoint L1_0{a, M_PI_2, 0, M_PI_2}; // JV = theta1
     RevoluteJoint L1_1{0, phi, l1, 0};
@@ -35,19 +48,19 @@ class ParallelChain {
     RevoluteJoint L6{0, -gamma, -l6, 0}; // JV = theta3
 
     // Define the servos
-    JointServo s11{0, 1470, -7.5, -90.0, 30.0}; // Hip servo
-    JointServo s21{1, 1450, 7.5, -50.0, 20.0}; // Lower servo - 1
-    JointServo s41{2, 1500, 7.5, -30.0, 30.0}; // Upper servo - 1
-    JointServo s22{3, 1520, -7.5, -50.0, 20.0}; // Lower servo - 2
-    JointServo s42{4, 1460, -7.5, -30.0, 30.0}; // Upper servo - 2
-    
+    JointServo servo[ACTIVE_JOINTS_PER_PCHAIN] = {JointServo(-7.5, -90.0, 30.0), // Hip servo
+                                                  JointServo(7.5, -50.0, 20.0), // Lower servo - 1
+                                                  JointServo(7.5, -30.0, 30.0), // Upper servo - 1
+                                                  JointServo(-7.5, -50.0, 20.0), // Lower servo - 2
+                                                  JointServo(-7.5, -30.0, 30.0)}; // Upper servo - 2
+
     KinematicChain<LINKS_PER_KCHAIN> kchain[KCHAIN_NUM_MAX];
 
     float theta3(void) {
         Point P4 = kchain[KCHAIN_UPPER].ForwardKinematics(LINK_POS_2).p;
         Point P5 = kchain[KCHAIN_UPPER].ForwardKinematics(LINK_POS_3).p;
         Point P3 = kchain[KCHAIN_MIDDLE].ForwardKinematics(LINK_POS_2).p;
-    
+
         // Compute required vectors
         Point V1 = P5 - P3;
         float v1mag = V1.Magnitude();
@@ -65,7 +78,7 @@ class ParallelChain {
     }
 
     public:
-    ParallelChain() {
+    ParallelChain(int id[], int uinit[]) {
         // Initialize the kinematic chains and joint servos
         kchain[KCHAIN_UPPER].AddLink(L1_0);  
         kchain[KCHAIN_UPPER].AddLink(L1_1);  
@@ -81,26 +94,29 @@ class ParallelChain {
         kchain[KCHAIN_LOWER].AddLink(L6);  
         L6.Move(theta3()); // TODO: specify theta3 while declaring the link
 
-        s11.Move(0);
-        s21.Move(0);
-        s41.Move(0);
-        s22.Move(0);
-        s42.Move(0);
-        delay(2000);
+        for (int i=ACTIVE_JOINT_11; i<=ACTIVE_JOINT_42; i++) {
+            servo[i].SetId(id[i]);
+            servo[i].SetUinit(uinit[i]);
+        }
+    }
 
-        s11.SetOffset(RAD_TO_DEG(L1_0.theta));
-        s21.SetOffset(RAD_TO_DEG(L2.theta));
-        s41.SetOffset(RAD_TO_DEG(L4.theta));
-        s22.SetOffset(RAD_TO_DEG(L2.theta));
-        s42.SetOffset(RAD_TO_DEG(L4.theta));
+    void Init(void) {
+        for (int i=ACTIVE_JOINT_11; i<=ACTIVE_JOINT_42; i++) {
+            servo[i].Move(0);
+        }
+        delay(1000);
+
+        servo[ACTIVE_JOINT_11].SetOffset(RAD_TO_DEG(L1_0.theta));
+        servo[ACTIVE_JOINT_21].SetOffset(RAD_TO_DEG(L2.theta));
+        servo[ACTIVE_JOINT_41].SetOffset(RAD_TO_DEG(L4.theta));
+        servo[ACTIVE_JOINT_22].SetOffset(RAD_TO_DEG(L2.theta));
+        servo[ACTIVE_JOINT_42].SetOffset(RAD_TO_DEG(L4.theta));
     }
 
     void MoveServos(float jv[]) {
-        s11.Move(jv[0]);
-        s21.Move(jv[1]);
-        s41.Move(jv[2]);
-        s22.Move(jv[3]);
-        s42.Move(jv[4]);
+        for (int i=ACTIVE_JOINT_11; i<=ACTIVE_JOINT_42; i++) {
+            servo[i].Move(jv[i]);
+        }
     }
 
     void InverseKinematics(Point PE, float rjv[]) {
