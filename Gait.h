@@ -4,10 +4,18 @@
 #include "Utils.h"
 #include "JointServo.h"
 #include "Link.h"
+#include "ParallelChain.h"
 
-#undef OFFLINE_TRAJECTORY_SUPPORT
+#define NUM_DATA_POINTS 10
+
+enum {
+    LEFT_LEG,
+    RIGHT_LEG,
+    LEG_NUM_MAX,
+};
 
 class Gait {
+    private:
     const int time_period = 2000;
     const float x_swing_rest = 13.42;
     const float x_swing_amp = 96.28;
@@ -20,40 +28,18 @@ class Gait {
     const float z_amp2 = 35;
     const float z_phase_offset = 4.7;
 
+    float jv[5];
+    ParallelChain left, right;
+
 #ifdef OFFLINE_TRAJECTORY_SUPPORT
-    struct {
-        float t11;
-        float t21;
-        float t41;
-        float t22;
-        float t42;
-    } trajectory[LEG_NUM_MAX][NUM_DATA_POINTS];
+    float trajectory[LEG_NUM_MAX][NUM_DATA_POINTS][5];
 #endif // OFFLINE_TRAJECTORY_SUPPORT
-    JointServo *s11, *s21, *s41, *s22, *s42;
-    RevoluteJoint *L1_0, *L1_1, *L2, *L3, *L4, *L6;
 
     public:
-    Gait(JointServo &_s11, JointServo &_s21, JointServo &_s41, JointServo &_s22, JointServo &_s42,
-          RevoluteJoint &_L1_0, RevoluteJoint &_L1_1, RevoluteJoint &_L2, RevoluteJoint &_L3,
-          RevoluteJoint &_L4, RevoluteJoint &_L6,
-          int _time_period) {
-        s11 = &_s11;
-        s21 = &_s21;
-        s41 = &_s41;
-        s22 = &_s22;
-        s42 = &_s42;
-        L1_0 = &_L1_0;
-        L1_1 = &_L1_1;
-        L2 = &_L2;
-        L3 = &_L3;
-        L4 = &_L4;
-        L6 = &_L6;
-    }
-
 #ifdef OFFLINE_TRAJECTORY_SUPPORT
-    Compute(int init_ts) {
+    Compute() {
         Point PE;
-        int interval = T/NUM_DATA_POINTS;
+        int interval = time_period/NUM_DATA_POINTS;
 
         for (int leg=LEFT_LEG; leg<=RIGHT_LEG; leg++) {
             float x_rest = x_swing_rest;
@@ -66,7 +52,7 @@ class Gait {
                 y_mean = y_mean_right;
             }
 
-            for (int t=0; t<T; t+=interval) {
+            for (int t=0; t<time_period; t+=interval) {
                 // Generate the trajectory
                 float tmp = 2*M_PI*t/time_period;
                 PE.X() = (x_swing_amp/2)*sin(tmp) + x_rest;
@@ -75,24 +61,16 @@ class Gait {
         
                 // Precompute the joint variables
                 int index = t/interval;
-                active.InverseKinematics(PE);
-                trajectory[leg][index].t11 = RAD_TO_DEG(L1_0->theta);
-                trajectory[leg][index].t21 = RAD_TO_DEG(L2->theta);
-                trajectory[leg][index].t41 = RAD_TO_DEG(L4->theta);
-                trajectory[leg][index].t22 = RAD_TO_DEG(L2->theta);
-                trajectory[leg][index].t42 = RAD_TO_DEG(L4->theta);
+                left.InverseKinematics(PE, trajectory[leg][index]);
             }
         }
     }
 
-    Execute(void) {        
+    Execute(int init_ts) {
         int interval = time_period/NUM_DATA_POINTS;
         int index = ((millis() - init_ts) % time_period)/interval;
-        s11->Move(trajectory[LEFT_LEG][index].t11);
-        s21->Move(trajectory[LEFT_LEG][index].t21);
-        s41->Move(trajectory[LEFT_LEG][index].t41);
-        s22->Move(trajectory[LEFT_LEG][index].t22);
-        s42->Move(trajectory[LEFT_LEG][index].t42);
+        left.MoveServos(trajectory[LEFT_LEG][index]);
+        right.MoveServos(trajectory[RIGHT_LEG][index]);
     }
 #endif // OFFLINE_TRAJECTORY_SUPPORT
 
@@ -110,12 +88,9 @@ class Gait {
         PE.Y() = (y_amp/(y_sigma*sqrt(2*M_PI))) * exp(-0.5*tmp2*tmp2) - y_offset;
         PE.Z() = z_amp1*sin(tmp1+z_phase_offset+phase_offset) + z_amp2*sin(2*(tmp1+z_phase_offset+phase_offset));
 
-        // Precompute the joint variables
-        s11->Move(RAD_TO_DEG(L1_0->theta));
-        s21->Move(RAD_TO_DEG(L2->theta));
-        s41->Move(RAD_TO_DEG(L4->theta));
-        s22->Move(RAD_TO_DEG(L2->theta));
-        s42->Move(RAD_TO_DEG(L4->theta));
+        // Compute the joint variables
+        left.InverseKinematics(PE, jv);
+        left.MoveServos(jv);
 
         // Generate the trajectory for Right Leg
         phase_offset = M_PI;

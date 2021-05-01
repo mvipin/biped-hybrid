@@ -14,52 +14,36 @@ enum {
 };
 
 #define LINKS_PER_KCHAIN 3
+#define phi DEG_TO_RAD(34.55)
+#define gamma DEG_TO_RAD(135.8)
+#define a 0 //overlapping joint in mm
+#define l1 35.087 // mm
+#define l2 110.0 // mm
+#define l3 110.0 // mm
+#define l4 48.132 // mm
+#define l5 126.669 // mm
+#define l6 48.795 // mm
 
 class ParallelChain {
-    float phi;
-    float gamma;
-    float a;
-    float l1;
-    float l2;
-    float l3;
-    float l4;
-    float l5;
-    float l6;
+    private:
+    // Define the joints
+    RevoluteJoint L1_0{a, M_PI_2, 0, M_PI_2}; // JV = theta1
+    RevoluteJoint L1_1{0, phi, l1, 0};
+    RevoluteJoint L2{0, 0, -l2, 0}; // JV = theta2
+    RevoluteJoint L3{0, 0, -l3, 0}; // JV = theta3
+    RevoluteJoint L4{0, M_PI_2-phi, l4, 0}; // JV = theta4
+    RevoluteJoint L6{0, -gamma, -l6, 0}; // JV = theta3
+
+    // Define the servos
+    JointServo s11{0, 1470, -7.5, -90.0, 30.0}; // Hip servo
+    JointServo s21{1, 1450, 7.5, -50.0, 20.0}; // Lower servo - 1
+    JointServo s41{2, 1500, 7.5, -30.0, 30.0}; // Upper servo - 1
+    JointServo s22{3, 1520, -7.5, -50.0, 20.0}; // Lower servo - 2
+    JointServo s42{4, 1460, -7.5, -30.0, 30.0}; // Upper servo - 2
+    
     KinematicChain<LINKS_PER_KCHAIN> kchain[KCHAIN_NUM_MAX];
-    JointServo *servo[SERVO_NUM_MAX];
-    RevoluteJoint *L1_0, *L1_1, *L2, *L3, *L4, *L6;
 
-    public:
-    ParallelChain(float _phi, float _gamma, float _a, float _l1, float _l2, float _l3, float _l4, float _l5, float _l6,
-          RevoluteJoint &_L1_0, RevoluteJoint &_L1_1, RevoluteJoint &_L2, RevoluteJoint &_L3,
-          RevoluteJoint &_L4, RevoluteJoint &_L6) {
-        phi = _phi;
-        gamma = _gamma;
-        a = _a;
-        l1 = _l1;
-        l2 = _l2;
-        l3 = _l3;
-        l4 = _l4;
-        l5 = _l5;
-        l6 = _l6;
-        L1_0 = &_L1_0;
-        L1_1 = &_L1_1;
-        L2 = &_L2;
-        L3 = &_L3;
-        L4 = &_L4;
-        L6 = &_L6;
-    }
-
-    AddToChain(int cid, RevoluteJoint &j) {
-        kchain[cid].AddLink(j);
-    }
-
-    AddServo(int sid, JointServo &s) {
-        servo[sid] = &s;
-        servo[sid]->Move(0);
-    }
-
-    float Theta3(void) {
+    float theta3(void) {
         Point P4 = kchain[KCHAIN_UPPER].ForwardKinematics(LINK_POS_2).p;
         Point P5 = kchain[KCHAIN_UPPER].ForwardKinematics(LINK_POS_3).p;
         Point P3 = kchain[KCHAIN_MIDDLE].ForwardKinematics(LINK_POS_2).p;
@@ -80,13 +64,53 @@ class ParallelChain {
         return t3;
     }
 
-    void InverseKinematics(Point PE) {
+    public:
+    ParallelChain() {
+        // Initialize the kinematic chains and joint servos
+        kchain[KCHAIN_UPPER].AddLink(L1_0);  
+        kchain[KCHAIN_UPPER].AddLink(L1_1);  
+        kchain[KCHAIN_UPPER].AddLink(L4);  
+    
+        kchain[KCHAIN_MIDDLE].AddLink(L1_0);  
+        kchain[KCHAIN_MIDDLE].AddLink(L2);  
+        kchain[KCHAIN_MIDDLE].AddLink(L3);  
+        L3.Move(theta3()); // TODO: specify theta3 while declaring the link 
+    
+        kchain[KCHAIN_LOWER].AddLink(L1_0);  
+        kchain[KCHAIN_LOWER].AddLink(L2);  
+        kchain[KCHAIN_LOWER].AddLink(L6);  
+        L6.Move(theta3()); // TODO: specify theta3 while declaring the link
+
+        s11.Move(0);
+        s21.Move(0);
+        s41.Move(0);
+        s22.Move(0);
+        s42.Move(0);
+        delay(2000);
+
+        s11.SetOffset(RAD_TO_DEG(L1_0.theta));
+        s21.SetOffset(RAD_TO_DEG(L2.theta));
+        s41.SetOffset(RAD_TO_DEG(L4.theta));
+        s22.SetOffset(RAD_TO_DEG(L2.theta));
+        s42.SetOffset(RAD_TO_DEG(L4.theta));
+    }
+
+    void MoveServos(float jv[]) {
+        s11.Move(jv[0]);
+        s21.Move(jv[1]);
+        s41.Move(jv[2]);
+        s22.Move(jv[3]);
+        s42.Move(jv[4]);
+    }
+
+    void InverseKinematics(Point PE, float rjv[]) {
         float jv;
     
         // Calculate and update 'theta1' and associated link(s)
         jv = M_PI_2 + atan(-PE.X()/PE.Y());
         //Serial << "Delta Theta1 = " << jv - L1_0.theta << '\n';
-        L1_0->Move(jv - L1_0->theta);
+        L1_0.Move(jv - L1_0.theta);
+        rjv[0] = RAD_TO_DEG(L1_0.theta);
         //Serial.print("Theta1 = ");
         //Serial.println(RAD_TO_DEG(L1_0.theta));
     
@@ -94,15 +118,16 @@ class ParallelChain {
         float r1 = PE.Magnitude();
         jv = atan(PE.Z()/PE.Y()) - acos((l2*l2 + r1*r1 - l3*l3)/(2*l2*r1));
         //Serial << "Delta Theta2 = " << jv - L2.theta << '\n';
-        L2->Move(jv - L2->theta);
+        L2.Move(jv - L2.theta);
+        rjv[1] = rjv[3] = RAD_TO_DEG(L2.theta);
         //Serial.print("Theta2 = ");
         //Serial.println(RAD_TO_DEG(L2.theta));
         
         // Calculate and update 'theta3' and associated link(s)
         jv = M_PI - acos((l2*l2 + l3*l3 - r1*r1)/(2*l2*l3));
         //Serial << "Delta Theta3 = " << jv - L3.theta << '\n';
-        L3->Move(jv - L3->theta);
-        L6->Move(jv - L6->theta - gamma);
+        L3.Move(jv - L3.theta);
+        L6.Move(jv - L6.theta - gamma);
     
         // Calculate and update 'theta4' and associated link(s)
         Point P3 = kchain[KCHAIN_MIDDLE].ForwardKinematics(LINK_POS_2).p;
@@ -124,7 +149,8 @@ class ParallelChain {
         float beta3 = acos((v2mag*v2mag + l1*l1 - l2*l2)/(2*l1*v2mag));
         jv = M_PI - (beta1 + beta2 + beta3);
         //Serial << "Delta Theta4 = " << jv - L4.theta << '\n';
-        L4->Move(jv - L4->theta);
+        L4.Move(jv - L4.theta);
+        rjv[2] = rjv[4] = RAD_TO_DEG(L4.theta);
         //Serial.print("Theta4 = ");
         //Serial.println(RAD_TO_DEG(L4.theta));
     }

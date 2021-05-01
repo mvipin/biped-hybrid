@@ -22,14 +22,14 @@ class JointServo {
     Adafruit_PWMServoDriver *pwm;
     
     public:
-    JointServo(Adafruit_PWMServoDriver &_pwm, int _id, int _uinit, float _slope, float _dmin, float _dmax) {
+    JointServo(int _id, int _uinit, float _slope, float _dmin, float _dmax) {
         id = _id;
         uinit = _uinit;
         dmin = _dmin;
         dmax = _dmax;
         slope = _slope;
         offset = 0;
-        pwm = &_pwm;
+//        pwm = &_pwm;
     }
 
     void Move(float deg) {
