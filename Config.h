@@ -35,13 +35,13 @@
 #define RIGHT_SERVO_INIT_POS_S42 1460
 
 // Gait Parameters
-#define STEPS_DURATION 2000
-#define X_SWING_REST 10.0 //13.42
+#define STEPS_DURATION 10000.0
+#define X_SWING_REST 13.42
 #define X_SWING_AMP 96.28
-#define Y_MEAN_LEFT 0.5
-#define Y_SIGMA 0.14
-#define Y_MEAN_RIGHT 1.5
-#define Y_AMP 18.0
+#define Y_MEAN_LEFT 2.5 //STEPS_DURATION/4.0
+#define Y_SIGMA 0.75 // 0.14
+#define Y_MEAN_RIGHT 7.5 // 1.5
+#define Y_AMP 90.0 // 18.0
 #define Y_OFFSET 200 //230.0
 #define Z_AMP1 70.0
 #define Z_AMP2 35.0
