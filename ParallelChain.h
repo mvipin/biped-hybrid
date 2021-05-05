@@ -16,6 +16,7 @@ enum {
     ACTIVE_JOINT_41,
     ACTIVE_JOINT_22,
     ACTIVE_JOINT_42,
+    ACTIVE_JOINT_9,
     ACTIVE_JOINTS_PER_PCHAIN,
 };
 
@@ -52,7 +53,8 @@ class ParallelChain {
                                                   JointServo(7.5, -50.0, 20.0), // Lower servo - 1
                                                   JointServo(7.5, -30.0, 30.0), // Upper servo - 1
                                                   JointServo(-7.5, -50.0, 20.0), // Lower servo - 2
-                                                  JointServo(-7.5, -30.0, 30.0)}; // Upper servo - 2
+                                                  JointServo(-7.5, -30.0, 30.0), // Upper servo - 2
+                                                  JointServo(7.5, -30.0, 30.0)}; // Foot servo
 
     KinematicChain<LINKS_PER_KCHAIN> kchain[KCHAIN_NUM_MAX];
 
@@ -94,14 +96,14 @@ class ParallelChain {
         kchain[KCHAIN_LOWER].AddLink(L6);  
         L6.Move(theta3()); // TODO: specify theta3 while declaring the link
 
-        for (int i=ACTIVE_JOINT_11; i<=ACTIVE_JOINT_42; i++) {
+        for (int i=ACTIVE_JOINT_11; i<ACTIVE_JOINTS_PER_PCHAIN; i++) {
             servo[i].SetId(id[i]);
             servo[i].SetUinit(uinit[i]);
         }
     }
 
     void Init(void) {
-        for (int i=ACTIVE_JOINT_11; i<=ACTIVE_JOINT_42; i++) {
+        for (int i=ACTIVE_JOINT_11; i<ACTIVE_JOINTS_PER_PCHAIN; i++) {
             servo[i].Move(0);
         }
         delay(1000);
@@ -111,10 +113,11 @@ class ParallelChain {
         servo[ACTIVE_JOINT_41].SetOffset(RAD_TO_DEG(L4.theta));
         servo[ACTIVE_JOINT_22].SetOffset(RAD_TO_DEG(L2.theta));
         servo[ACTIVE_JOINT_42].SetOffset(RAD_TO_DEG(L4.theta));
+        servo[ACTIVE_JOINT_9].SetOffset(0);
     }
 
     void MoveServos(float jv[]) {
-        for (int i=ACTIVE_JOINT_11; i<=ACTIVE_JOINT_42; i++) {
+        for (int i=ACTIVE_JOINT_11; i<ACTIVE_JOINTS_PER_PCHAIN; i++) {
             servo[i].Move(jv[i]);
         }
     }
@@ -167,8 +170,7 @@ class ParallelChain {
         //Serial << "Delta Theta4 = " << jv - L4.theta << '\n';
         L4.Move(jv - L4.theta);
         rjv[2] = rjv[4] = RAD_TO_DEG(L4.theta);
-        //Serial.print("Theta4 = ");
-        //Serial.println(RAD_TO_DEG(L4.theta));
+        rjv[5] = rjv[1] - (-RAD_TO_DEG(theta3()));
     }
 };
 #endif // PARALLEL_CHAIN_H

@@ -23,16 +23,16 @@ class Gait {
 
     int ruinit[ACTIVE_JOINTS_PER_PCHAIN] = {
         RIGHT_SERVO_INIT_POS_S11, RIGHT_SERVO_INIT_POS_S21, RIGHT_SERVO_INIT_POS_S41,
-        RIGHT_SERVO_INIT_POS_S22, RIGHT_SERVO_INIT_POS_S42};
+        RIGHT_SERVO_INIT_POS_S22, RIGHT_SERVO_INIT_POS_S42, RIGHT_SERVO_INIT_POS_S9};
     int rid[ACTIVE_JOINTS_PER_PCHAIN] = {
         RIGHT_SERVO_PIN_S11, RIGHT_SERVO_PIN_S21, RIGHT_SERVO_PIN_S41,
-        RIGHT_SERVO_PIN_S22, RIGHT_SERVO_PIN_S42};
+        RIGHT_SERVO_PIN_S22, RIGHT_SERVO_PIN_S42, RIGHT_SERVO_PIN_S9};
     int luinit[ACTIVE_JOINTS_PER_PCHAIN] = {
         LEFT_SERVO_INIT_POS_S11, LEFT_SERVO_INIT_POS_S21, LEFT_SERVO_INIT_POS_S41,
-        LEFT_SERVO_INIT_POS_S22, LEFT_SERVO_INIT_POS_S42};
+        LEFT_SERVO_INIT_POS_S22, LEFT_SERVO_INIT_POS_S42, LEFT_SERVO_INIT_POS_S9};
     int lid[ACTIVE_JOINTS_PER_PCHAIN] = {
         LEFT_SERVO_PIN_S11, LEFT_SERVO_PIN_S21, LEFT_SERVO_PIN_S41,
-        LEFT_SERVO_PIN_S22, LEFT_SERVO_PIN_S42};
+        LEFT_SERVO_PIN_S22, LEFT_SERVO_PIN_S42, LEFT_SERVO_PIN_S9};
 
     ParallelChain leg[LEG_NUM_MAX] = {ParallelChain(lid, luinit), ParallelChain(rid, ruinit)};
 
@@ -118,6 +118,7 @@ class Gait {
         // Compute and actuate the joint variables
         leg[RIGHT_LEG].InverseKinematics(PE, jv);
         leg[RIGHT_LEG].MoveServos(jv);
+        //Serial << t << " " << jv[ACTIVE_JOINT_11] << " " << jv[ACTIVE_JOINT_21] << " " << jv[ACTIVE_JOINT_41] << " " << jv[ACTIVE_JOINT_22] << " " << jv[ACTIVE_JOINT_42] << " " << jv[ACTIVE_JOINT_9] << "\n";
     }
 };
 #endif //GAIT_H

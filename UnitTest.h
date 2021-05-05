@@ -22,12 +22,14 @@ class UnitTest {
                                            RIGHT_SERVO_INIT_POS_S21,
                                            RIGHT_SERVO_INIT_POS_S41,
                                            RIGHT_SERVO_INIT_POS_S22,
-                                           RIGHT_SERVO_INIT_POS_S42};
+                                           RIGHT_SERVO_INIT_POS_S42,
+                                           RIGHT_SERVO_INIT_POS_S9};
     int id[ACTIVE_JOINTS_PER_PCHAIN] = {RIGHT_SERVO_PIN_S11,
                                         RIGHT_SERVO_PIN_S21,
                                         RIGHT_SERVO_PIN_S41,
                                         RIGHT_SERVO_PIN_S22,
-                                        RIGHT_SERVO_PIN_S42};
+                                        RIGHT_SERVO_PIN_S42,
+                                        RIGHT_SERVO_PIN_S9};
     ParallelChain leg{id, uinit};
 
     public:

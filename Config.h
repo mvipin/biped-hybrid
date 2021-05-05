@@ -7,11 +7,12 @@
 #define NUM_DATA_POINTS 25 // For offline trajectory computation
 
 // Pin assignment for the left leg servos
-#define LEFT_SERVO_PIN_S11 5
-#define LEFT_SERVO_PIN_S21 6
-#define LEFT_SERVO_PIN_S41 7
-#define LEFT_SERVO_PIN_S22 8
-#define LEFT_SERVO_PIN_S42 9
+#define LEFT_SERVO_PIN_S11 6
+#define LEFT_SERVO_PIN_S21 7
+#define LEFT_SERVO_PIN_S41 8
+#define LEFT_SERVO_PIN_S22 9
+#define LEFT_SERVO_PIN_S42 10
+#define LEFT_SERVO_PIN_S9  11
 
 // Pin assignment for the right leg servos
 #define RIGHT_SERVO_PIN_S11 0
@@ -19,20 +20,23 @@
 #define RIGHT_SERVO_PIN_S41 2
 #define RIGHT_SERVO_PIN_S22 3
 #define RIGHT_SERVO_PIN_S42 4
+#define RIGHT_SERVO_PIN_S9  5
 
 // Calibrated params for the left leg servos
 #define LEFT_SERVO_INIT_POS_S11 1470
 #define LEFT_SERVO_INIT_POS_S21 1450
 #define LEFT_SERVO_INIT_POS_S41 1500
-#define LEFT_SERVO_INIT_POS_S22 1520
+#define LEFT_SERVO_INIT_POS_S22 1550
 #define LEFT_SERVO_INIT_POS_S42 1460
+#define LEFT_SERVO_INIT_POS_S9  1630
 
 // Calibrated params for the right leg servos
 #define RIGHT_SERVO_INIT_POS_S11 1470
 #define RIGHT_SERVO_INIT_POS_S21 1450
 #define RIGHT_SERVO_INIT_POS_S41 1500
-#define RIGHT_SERVO_INIT_POS_S22 1520
+#define RIGHT_SERVO_INIT_POS_S22 1550
 #define RIGHT_SERVO_INIT_POS_S42 1460
+#define RIGHT_SERVO_INIT_POS_S9  1630
 
 // Gait Parameters
 #define STEPS_DURATION 10000.0
