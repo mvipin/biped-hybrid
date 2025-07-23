@@ -15,8 +15,7 @@ The **Biped Hybrid** project implements a sophisticated robotic leg system that 
 
 ### 🔗 Project Links
 - **Hackaday Project**: [Hybrid Leg for Bipedal Robot](https://hackaday.io/project/179225-hybrid-leg-for-bipedal-robot)
-- **Demo Video**: [YouTube Demonstration](https://youtube.com/placeholder) *(Coming Soon)*
-- **Research Paper**: *(In Progress)*
+- **Demo Video**: [YouTube Demonstration](https://youtu.be/3PNreAL9f4w)
 
 ## 🏗️ System Architecture
 
@@ -476,7 +475,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Contact & Support
 
 **Vipin M** - [@rubbotix](https://hackaday.io/rubbotix)
-- **Email**: vipinm@gmail.com
+- **Email**: rubbotix@gmail.com
 - **GitHub**: [https://github.com/mvipin](https://github.com/mvipin)
 - **Project Repository**: [https://github.com/mvipin/biped-hybrid](https://github.com/mvipin/biped-hybrid)
 - **Hackaday Project**: [https://hackaday.io/project/179225](https://hackaday.io/project/179225-hybrid-leg-for-bipedal-robot)
