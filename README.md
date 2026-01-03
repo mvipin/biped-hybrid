@@ -61,15 +61,6 @@ I built this project to explore the unique design proposed by Disney Research, w
 
 ## Design Philosophy
 
-<table>
-<tr>
-<td width="450">
-<img src="media/hardware/design.gif" alt="CAD Design Animation" width="420"/>
-<br/>
-<em>CAD design animation showing the hybrid leg mechanism in Fusion 360</em>
-</td>
-<td valign="top">
-
 Learning about the impact of bipedia on human evolution has been of interest since antiquity—from Aristotle, through the Renaissance, to the present day. In his work *De Motu Animalium* (1680), Borelli introduced spring-mass models to understand walking and running in bipedal animals. To understand the control aspects of legged locomotion, Marc Raibert's *Legged Robots That Balance* (1986) provides an excellent starting point.
 
 I spent time reviewing key concepts like kinematics, dynamics, and control before building this project. Eager to create something tangible, I based my design on the Disney Research paper by Gim et al., which proposes a hybrid leg for bipedal robots that combines both serial and parallel mechanisms to achieve 6 DOF.
@@ -99,9 +90,11 @@ Hip ─┬─► Chain A (5-bar linkage) ──┐
 
 I started by designing the hybrid leg in Fusion 360, going through several revisions to address weakness in the ankle joint that caused breakage or excessive play during testing. I built a single leg first to iron out mechanical and software issues, then printed a mirror version for the second leg.
 
-</td>
-</tr>
-</table>
+<p align="center">
+<img src="media/hardware/design.gif" alt="CAD Design Animation" width="500"/>
+<br/>
+<em>CAD design animation showing the hybrid leg mechanism in Fusion 360</em>
+</p>
 
 ---
 
@@ -155,14 +148,11 @@ biped-hybrid/
 
 ## 🔧 Kinematic Analysis
 
-<table>
-<tr>
-<td width="450">
-<img src="media/kinematics/kinematics.png" alt="Kinematic Analysis Diagram" width="420"/>
+<p align="center">
+<img src="media/kinematics/kinematics.png" alt="Kinematic Analysis Diagram" width="600"/>
 <br/>
 <em>Forward and inverse kinematics diagram showing joint angles and link definitions</em>
-</td>
-<td valign="top">
+</p>
 
 ### Kinematic Chain Breakdown
 
@@ -184,10 +174,6 @@ I analyzed the hybrid leg mechanism by decomposing it into three kinematic chain
 | **L3** | Pitch joint P3 | Pitch joint PE | Shank segment (to end-effector) |
 | **L4** | Pitch joint P4 | Pitch joint P5 | Parallel linkage bar |
 | **L6** | Pitch joint P3 | Pitch joint P6 | Foot orientation link |
-
-</td>
-</tr>
-</table>
 
 ### Kinematic Parameters
 
@@ -279,16 +265,13 @@ The inverse kinematics computation runs in **<10ms** on the ESP32, enabling real
 
 ## 🚶 Trajectory Generation
 
-<table>
-<tr>
-<td width="450">
-<img src="media/trajectory/trajectory.png" alt="Trajectory Visualization" width="420"/>
+I generated trajectories manually with independent sagittal (forward/backward) and lateral (side-to-side) movements. This approach allows me to tune each axis independently before combining them for full walking gaits.
+
+<p align="center">
+<img src="media/trajectory/trajectory.png" alt="Trajectory Visualization" width="500"/>
 <br/>
 <em>Trajectory visualization showing the foot path during a walking cycle</em>
-</td>
-<td valign="top">
-
-I generated trajectories manually with independent sagittal (forward/backward) and lateral (side-to-side) movements. This approach allows me to tune each axis independently before combining them for full walking gaits.
+</p>
 
 ### Trajectory Methodology
 
@@ -309,10 +292,6 @@ The trajectory generation follows a three-axis decomposition:
 #define Z_AMP1 70.0               // Primary forward motion (mm)
 #define Z_AMP2 35.0               // Secondary harmonic (mm)
 ```
-
-</td>
-</tr>
-</table>
 
 ### Trajectory Equations
 
